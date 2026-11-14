@@ -1,0 +1,30 @@
+@model IReadOnlyList<StockValuationRow>
+@{
+    ViewData["Title"] = "Stock valuation";
+}
+<h1 class="h3 mb-3">Stock valuation</h1>
+<p class="text-muted small">From the <code>usp_StockValuation</code> stored procedure. Active products only.</p>
+<table class="table" id="stock-valuation">
+    <thead><tr><th>Category</th><th class="text-end">Products</th><th class="text-end">Units</th><th class="text-end">Value at cost</th><th class="text-end">Value at selling price</th></tr></thead>
+    <tbody>
+        @foreach (var row in Model)
+        {
+            <tr>
+                <td>@row.Category</td>
+                <td class="text-end">@row.Products</td>
+                <td class="text-end">@row.Units</td>
+                <td class="text-end">₹@row.CostValue.ToString("N2")</td>
+                <td class="text-end">₹@row.RetailValue.ToString("N2")</td>
+            </tr>
+        }
+    </tbody>
+    <tfoot>
+        <tr>
+            <th>Total</th>
+            <th class="text-end">@Model.Sum(r => r.Products)</th>
+            <th class="text-end">@Model.Sum(r => r.Units)</th>
+            <th class="text-end">₹@Model.Sum(r => r.CostValue).ToString("N2")</th>
+            <th class="text-end">₹@Model.Sum(r => r.RetailValue).ToString("N2")</th>
+        </tr>
+    </tfoot>
+</table>

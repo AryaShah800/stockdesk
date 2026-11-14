@@ -1,0 +1,55 @@
+@model IReadOnlyList<Product>
+@{
+    ViewData["Title"] = "Products";
+    var showInactive = (bool)(ViewBag.ShowInactive ?? false);
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Products</h1>
+    @if (User.IsInRole(Roles.Admin))
+    {
+        <a class="btn btn-primary" asp-action="Create">Add product</a>
+    }
+</div>
+
+<div class="row g-2 mb-3">
+    <div class="col-md-6">
+        <input type="search" id="product-search" class="form-control" placeholder="Live search by name or SKU"
+               data-search-url="@Url.Action("Search", "Products")" autocomplete="off" aria-label="Search products" />
+    </div>
+    <div class="col-md-6 text-md-end">
+        @if (showInactive)
+        {
+            <a asp-action="Index">Hide inactive products</a>
+        }
+        else
+        {
+            <a asp-action="Index" asp-route-showInactive="true">Show inactive products</a>
+        }
+    </div>
+</div>
+
+<table class="table table-hover align-middle" id="product-table">
+    <thead>
+        <tr><th>SKU</th><th>Name</th><th>Category</th><th class="text-end">Price</th><th class="text-end">In stock</th><th></th></tr>
+    </thead>
+    <tbody id="product-rows">
+        @foreach (var p in Model)
+        {
+            <tr class="@(p.IsActive ? "" : "text-muted")">
+                <td>@p.Sku</td>
+                <td><a asp-action="Details" asp-route-id="@p.Id">@p.Name</a></td>
+                <td>@p.Category?.Name</td>
+                <td class="text-end">₹@p.UnitPrice.ToString("N2")</td>
+                <td class="text-end">@p.QuantityInStock</td>
+                <td>
+                    @if (!p.IsActive) { <span class="badge text-bg-secondary">Inactive</span> }
+                    else if (p.IsLowStock) { <span class="badge text-bg-warning">Low</span> }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+@if (Model.Count == 0)
+{
+    <p class="text-muted">No products yet.</p>
+}

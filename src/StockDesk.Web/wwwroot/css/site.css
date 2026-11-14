@@ -1,0 +1,15 @@
+html {
+  font-size: 15px;
+}
+
+body {
+  background: #f7f7f9;
+}
+
+main .table {
+  background: #fff;
+}
+
+#sale-search-results:empty {
+  display: none;
+}

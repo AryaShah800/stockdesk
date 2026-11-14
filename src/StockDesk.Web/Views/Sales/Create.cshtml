@@ -1,0 +1,46 @@
+@model CreateSaleViewModel
+@{
+    ViewData["Title"] = "New sale";
+}
+<h1 class="h3 mb-3">New sale</h1>
+<form asp-action="Create" method="post" id="sale-form">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <div class="row g-3 mb-3">
+        <div class="col-md-6">
+            <label asp-for="CustomerName" class="form-label"></label>
+            <input asp-for="CustomerName" class="form-control" placeholder="Optional. Leave blank for a walk-in customer" />
+        </div>
+        <div class="col-md-6 position-relative">
+            <label for="sale-search" class="form-label">Add product</label>
+            <input type="search" id="sale-search" class="form-control" placeholder="Type a name or SKU"
+                   data-search-url="@Url.Action("Search", "Products")" autocomplete="off" />
+            <div id="sale-search-results" class="list-group position-absolute w-100 shadow-sm" style="z-index:10"></div>
+        </div>
+    </div>
+
+    <table class="table align-middle" id="sale-lines">
+        <thead>
+            <tr><th>Product</th><th class="text-end">Price</th><th style="width:9rem">Quantity</th><th class="text-end">Amount</th><th></th></tr>
+        </thead>
+        <tbody>
+            @for (var i = 0; i < Model.Lines.Count; i++)
+            {
+                var line = Model.Lines[i];
+                Model.Products.TryGetValue(line.ProductId, out var p);
+                <tr data-product-id="@line.ProductId" data-price="@(p?.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "0")">
+                    <td>@(p?.Name ?? "Unknown product") <span class="text-muted small">@p?.Sku</span>
+                        <input type="hidden" name="Lines[@i].ProductId" value="@line.ProductId" class="line-product" /></td>
+                    <td class="text-end">₹@((p?.UnitPrice ?? 0).ToString("N2"))</td>
+                    <td><input type="number" name="Lines[@i].Quantity" value="@line.Quantity" min="1" max="@Sale.MaxQuantityPerLine" class="form-control line-qty" /></td>
+                    <td class="text-end line-amount"></td>
+                    <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger line-remove" aria-label="Remove">Remove</button></td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr><th colspan="3" class="text-end">Total</th><th class="text-end" id="sale-total">₹0.00</th><th></th></tr>
+        </tfoot>
+    </table>
+    <p class="text-muted small" id="sale-empty" @(Model.Lines.Count > 0 ? "hidden" : "")>No products added yet.</p>
+    <button type="submit" class="btn btn-success">Save sale and print bill</button>
+</form>

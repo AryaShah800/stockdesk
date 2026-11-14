@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - StockDesk</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-md navbar-dark bg-dark mb-3">
+            <div class="container">
+                <a class="navbar-brand" asp-controller="Home" asp-action="Index">StockDesk</a>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"
+                            aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="nav">
+                        <ul class="navbar-nav me-auto">
+                            <li class="nav-item"><a class="nav-link" asp-controller="Sales" asp-action="Create">New sale</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-controller="Sales" asp-action="Index">Bills</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-controller="Products" asp-action="Index">Products</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-controller="Alerts" asp-action="Index">Low stock</a></li>
+                            @if (User.IsInRole(Roles.Admin))
+                            {
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Admin</a>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" asp-controller="Categories" asp-action="Index">Categories</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Suppliers" asp-action="Index">Suppliers</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Reports" asp-action="DailySales">Daily sales report</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Reports" asp-action="StockValuation">Stock valuation</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Users" asp-action="Index">Users</a></li>
+                                    </ul>
+                                </li>
+                            }
+                        </ul>
+                        <span class="navbar-text me-3 small">@User.Identity.Name (@(User.IsInRole(Roles.Admin) ? "Admin" : "Staff"))</span>
+                        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-outline-light btn-sm">Log out</button>
+                        </form>
+                    </div>
+                }
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            <partial name="_Messages" />
+            @RenderBody()
+        </main>
+    </div>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

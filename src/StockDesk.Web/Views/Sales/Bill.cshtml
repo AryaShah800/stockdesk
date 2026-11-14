@@ -1,0 +1,46 @@
+@model BillViewModel
+@{
+    Layout = "_PrintLayout";
+    ViewData["Title"] = Model.Sale.BillNumber;
+    var sale = Model.Sale;
+    var n = 0;
+}
+<div class="no-print mb-3 d-flex gap-2">
+    <button type="button" class="btn btn-primary" onclick="window.print()">Print</button>
+    <a class="btn btn-outline-secondary" asp-action="Create">New sale</a>
+    <a class="btn btn-link" asp-controller="Home" asp-action="Index">Dashboard</a>
+</div>
+
+<div class="bill">
+    <header class="text-center mb-3">
+        <h1 class="h4 mb-0">@Model.ShopName</h1>
+        @if (!string.IsNullOrEmpty(Model.ShopAddress)) { <div class="small">@Model.ShopAddress</div> }
+        @if (!string.IsNullOrEmpty(Model.ShopPhone)) { <div class="small">Phone: @Model.ShopPhone</div> }
+    </header>
+
+    <div class="d-flex justify-content-between small mb-2">
+        <div>Bill no: <strong id="bill-number">@sale.BillNumber</strong><br />Customer: @(sale.CustomerName ?? "Walk-in")</div>
+        <div class="text-end">Date: @Model.SoldAtLocal.ToString("dd MMM yyyy HH:mm")<br />Cashier: @sale.SoldBy</div>
+    </div>
+
+    <table class="table table-sm table-bordered">
+        <thead><tr><th>#</th><th>Item</th><th class="text-end">Qty</th><th class="text-end">Rate</th><th class="text-end">Amount</th></tr></thead>
+        <tbody>
+            @foreach (var line in sale.Lines.OrderBy(l => l.Id))
+            {
+                n++;
+                <tr>
+                    <td>@n</td>
+                    <td>@line.ProductName <span class="text-muted small">@line.Sku</span></td>
+                    <td class="text-end">@line.Quantity</td>
+                    <td class="text-end">@line.UnitPrice.ToString("N2")</td>
+                    <td class="text-end">@line.LineTotal.ToString("N2")</td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr><th colspan="2">Total (@sale.ItemCount items)</th><th colspan="3" class="text-end" id="bill-total">₹@sale.Total.ToString("N2")</th></tr>
+        </tfoot>
+    </table>
+    <p class="text-center small mt-3">Thank you for shopping with us.</p>
+</div>

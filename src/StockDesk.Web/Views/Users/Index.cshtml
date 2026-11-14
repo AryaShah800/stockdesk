@@ -1,0 +1,21 @@
+@model List<UserRow>
+@{
+    ViewData["Title"] = "Users";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Users</h1>
+    <a class="btn btn-primary" asp-action="Create">Add user</a>
+</div>
+<table class="table">
+    <thead><tr><th>Email</th><th>Role</th><th></th></tr></thead>
+    <tbody>
+        @foreach (var u in Model)
+        {
+            <tr>
+                <td>@u.Email</td>
+                <td>@string.Join(", ", u.Roles)</td>
+                <td>@if (u.LockedOut) { <span class="badge text-bg-danger">Locked out</span> }</td>
+            </tr>
+        }
+    </tbody>
+</table>

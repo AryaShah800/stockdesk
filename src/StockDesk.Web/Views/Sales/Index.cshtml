@@ -1,0 +1,26 @@
+@model IReadOnlyList<Sale>
+@inject ShopClock Clock
+@{
+    ViewData["Title"] = "Bills";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Bills</h1>
+    <a class="btn btn-success" asp-action="Create">New sale</a>
+</div>
+<p class="text-muted small">The 50 most recent bills.</p>
+<table class="table table-hover">
+    <thead><tr><th>Bill</th><th>Date</th><th>Customer</th><th>Sold by</th><th class="text-end">Items</th><th class="text-end">Total</th></tr></thead>
+    <tbody>
+        @foreach (var s in Model)
+        {
+            <tr>
+                <td><a asp-action="Bill" asp-route-id="@s.Id">@s.BillNumber</a></td>
+                <td>@Clock.ToLocal(s.SoldAtUtc).ToString("dd MMM yyyy HH:mm")</td>
+                <td>@(s.CustomerName ?? "Walk-in")</td>
+                <td>@s.SoldBy</td>
+                <td class="text-end">@s.ItemCount</td>
+                <td class="text-end">₹@s.Total.ToString("N2")</td>
+            </tr>
+        }
+    </tbody>
+</table>

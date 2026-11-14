@@ -1,0 +1,40 @@
+@model Product
+@{
+    ViewData["Title"] = Model.Name;
+}
+<h1 class="h3">@Model.Name <small class="text-muted">@Model.Sku</small></h1>
+@if (!Model.IsActive)
+{
+    <p><span class="badge text-bg-secondary">Inactive</span> Not shown in search or new sales.</p>
+}
+<dl class="row">
+    <dt class="col-sm-3">Category</dt><dd class="col-sm-9">@Model.Category?.Name</dd>
+    <dt class="col-sm-3">Supplier</dt><dd class="col-sm-9">@(Model.Supplier?.Name ?? "None")</dd>
+    <dt class="col-sm-3">Selling price</dt><dd class="col-sm-9">₹@Model.UnitPrice.ToString("N2")</dd>
+    @if (User.IsInRole(Roles.Admin))
+    {
+        <dt class="col-sm-3">Cost price</dt><dd class="col-sm-9">₹@Model.CostPrice.ToString("N2")</dd>
+    }
+    <dt class="col-sm-3">In stock</dt>
+    <dd class="col-sm-9" id="quantity-in-stock">@Model.QuantityInStock @if (Model.IsLowStock) { <span class="badge text-bg-warning">Low</span> }</dd>
+    <dt class="col-sm-3">Reorder level</dt><dd class="col-sm-9">@Model.ReorderLevel</dd>
+</dl>
+
+@if (User.IsInRole(Roles.Admin))
+{
+    <div class="d-flex flex-wrap gap-3 align-items-end">
+        <a class="btn btn-outline-primary" asp-action="Edit" asp-route-id="@Model.Id">Edit</a>
+        <form asp-action="Restock" asp-route-id="@Model.Id" method="post" class="d-flex gap-2 align-items-end">
+            <div>
+                <label for="quantity" class="form-label small mb-0">Add stock</label>
+                <input type="number" id="quantity" name="quantity" min="1" max="1000000" value="1" class="form-control" style="width:8rem" required />
+            </div>
+            <button type="submit" class="btn btn-outline-success">Restock</button>
+        </form>
+        <form asp-action="SetActive" asp-route-id="@Model.Id" method="post">
+            <input type="hidden" name="active" value="@(Model.IsActive ? "false" : "true")" />
+            <button type="submit" class="btn btn-outline-secondary">@(Model.IsActive ? "Deactivate" : "Activate")</button>
+        </form>
+    </div>
+}
+<p class="mt-4"><a asp-action="Index">Back to products</a></p>
