@@ -21,6 +21,70 @@
     </div></div>
 </div>
 
+@{
+    var maxRevenue = Math.Max(Model.Trend.Max(t => t.Revenue), 1m);
+    // round the axis top up to 1, 2, 5 or 10 times a power of ten so the gridlines read cleanly
+    var magnitude = Math.Pow(10, Math.Floor(Math.Log10((double)maxRevenue)));
+    var step = new[] { 1d, 2d, 5d, 10d }.First(m => m * magnitude >= (double)maxRevenue);
+    var axisTop = (decimal)(step * magnitude);
+    const double w = 640, h = 190, left = 44, bottom = 22, top = 8;
+    var plotH = h - bottom - top;
+    var slot = (w - left) / Model.Trend.Count;
+    var barW = slot * 0.62;
+    var topMax = Math.Max(Model.TopProducts.Count == 0 ? 1m : Model.TopProducts.Max(p => p.Revenue), 1m);
+    string F(double v) => v.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+}
+<div class="row g-4 mb-4">
+    <div class="col-lg-7">
+        <div class="panel">
+            <h2>Sales, last @Model.TrendDays days</h2>
+            <svg class="chart" id="sales-trend" viewBox="0 0 640 190" role="img" aria-label="Daily revenue for the last @Model.TrendDays days">
+                @foreach (var tick in new[] { 0m, axisTop / 2, axisTop })
+                {
+                    var y = top + plotH - (double)(tick / axisTop) * plotH;
+                    <line class="axis" x1="@F(left)" x2="@F(w)" y1="@F(y)" y2="@F(y)" />
+                    @:<text x="@F(left - 6)" y="@F(y + 4)" text-anchor="end">@(tick >= 1000 ? (tick / 1000).ToString("0.#") + "k" : tick.ToString("0"))</text>
+                }
+                @for (var i = 0; i < Model.Trend.Count; i++)
+                {
+                    var point = Model.Trend[i];
+                    var bh = (double)(point.Revenue / axisTop) * plotH;
+                    var x = left + i * slot + (slot - barW) / 2;
+                    <rect class="bar" x="@F(x)" y="@F(top + plotH - bh)" width="@F(barW)" height="@F(bh)" rx="2">
+                        <title>@point.Date.ToString("ddd d MMM"): ₹@point.Revenue.ToString("N2"), @point.Bills bills</title>
+                    </rect>
+                    @if (i % 2 == 0)
+                    {
+                        @:<text x="@F(x + barW / 2)" y="@F(h - 6)" text-anchor="middle">@point.Date.ToString("d MMM")</text>
+                    }
+                }
+            </svg>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="panel">
+            <h2>Top products by revenue</h2>
+            @if (Model.TopProducts.Count == 0)
+            {
+                <div class="empty">No sales in the last @Model.TrendDays days.</div>
+            }
+            else
+            {
+                <ol class="hbars" id="top-products">
+                    @foreach (var product in Model.TopProducts)
+                    {
+                        <li>
+                            <div class="hbar-label"><span>@product.ProductName</span><span>₹@product.Revenue.ToString("N0")</span></div>
+                            <div class="hbar-track"><div class="hbar-fill" style="width:@(F((double)(product.Revenue / topMax) * 100))%"></div></div>
+                            <div class="hbar-sub">@product.Units units, @product.Sku</div>
+                        </li>
+                    }
+                </ol>
+            }
+        </div>
+    </div>
+</div>
+
 <div class="row g-4">
     <div class="col-lg-5">
         <div class="panel">

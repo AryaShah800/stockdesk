@@ -42,4 +42,25 @@ internal sealed class ReportService(StockDeskDbContext db, IOptions<ShopOptions>
         await db.Database
             .SqlQueryRaw<StockValuationRow>($"EXEC dbo.{SqlObjects.StockValuationProcedure}")
             .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<TopProductRow>> GetTopProductsAsync(DateOnly from, DateOnly to, int take, CancellationToken ct = default)
+    {
+        if (to < from)
+            throw new ArgumentException("The end date is before the start date.", nameof(to));
+        ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
+
+        // Shop-local dates to a half-open UTC range, the same rule usp_DailySales applies.
+        var offset = TimeSpan.FromMinutes(shop.Value.UtcOffsetMinutes);
+        var fromUtc = DateTime.SpecifyKind(from.ToDateTime(TimeOnly.MinValue) - offset, DateTimeKind.Utc);
+        var toUtc = DateTime.SpecifyKind(to.AddDays(1).ToDateTime(TimeOnly.MinValue) - offset, DateTimeKind.Utc);
+
+        var top = await db.SaleLines
+            .Where(l => db.Sales.Any(s => s.Id == l.SaleId && s.SoldAtUtc >= fromUtc && s.SoldAtUtc < toUtc))
+            .GroupBy(l => new { l.ProductId, l.Sku, l.ProductName })
+            .Select(g => new { g.Key.Sku, g.Key.ProductName, Units = g.Sum(l => l.Quantity), Revenue = g.Sum(l => l.LineTotal) })
+            .OrderByDescending(r => r.Revenue).ThenBy(r => r.Sku)
+            .Take(take)
+            .ToListAsync(ct);
+        return top.Select(r => new TopProductRow(r.Sku, r.ProductName, r.Units, r.Revenue)).ToList();
+    }
 }

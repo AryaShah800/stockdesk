@@ -110,4 +110,34 @@ public sealed class ReportProcedureTests : IDisposable
             new StockValuationRow("Grocery", 1, 3, 540m, 690m),
             new StockValuationRow("Stationery", 2, 110, 1030m, 1550m));
     }
+
+    [Fact]
+    public async Task Top_products_ranks_by_revenue_inside_the_shop_local_range_and_respects_take()
+    {
+        var p = await _database.SeedProductsAsync(("A", 10m, 500, 0), ("B", 25m, 500, 0), ("C", 5m, 500, 0));
+        await SellAtAsync(Utc(10, 6), (p[0], 3), (p[1], 1));   // A 30, B 25
+        await SellAtAsync(Utc(11, 6), (p[0], 2), (p[2], 10));  // A 20 (50 total), C 50
+        await SellAtAsync(Utc(11, 18, 30), (p[1], 40));        // 12 Nov IST: outside the range
+        await SellAtAsync(Utc(9, 18, 29), (p[1], 40));         // 9 Nov IST: outside the range
+
+        await using var db = _database.CreateContext();
+        var rows = await Reports(db).GetTopProductsAsync(new DateOnly(2026, 11, 10), new DateOnly(2026, 11, 11), 2);
+
+        rows.Should().Equal(
+            new TopProductRow("A", "Product A", 5, 50m),
+            new TopProductRow("C", "Product C", 10, 50m));
+    }
+
+    [Fact]
+    public async Task Top_products_is_empty_without_sales_and_rejects_bad_arguments()
+    {
+        await using var db = _database.CreateContext();
+        var reports = Reports(db);
+
+        (await reports.GetTopProductsAsync(new DateOnly(2026, 11, 1), new DateOnly(2026, 11, 2), 5)).Should().BeEmpty();
+        await FluentActions.Awaiting(() => reports.GetTopProductsAsync(new DateOnly(2026, 11, 2), new DateOnly(2026, 11, 1), 5))
+            .Should().ThrowAsync<ArgumentException>();
+        await FluentActions.Awaiting(() => reports.GetTopProductsAsync(new DateOnly(2026, 11, 1), new DateOnly(2026, 11, 2), 0))
+            .Should().ThrowAsync<ArgumentException>();
+    }
 }

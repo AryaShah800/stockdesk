@@ -25,6 +25,9 @@ public sealed class DashboardViewModel
     public int LowStockProducts { get; init; }
     public IReadOnlyList<LowStockAlert> OpenAlerts { get; init; } = [];
     public IReadOnlyList<Sale> RecentSales { get; init; } = [];
+    public IReadOnlyList<StockDesk.Application.Reports.TrendPoint> Trend { get; init; } = [];
+    public IReadOnlyList<TopProductRow> TopProducts { get; init; } = [];
+    public int TrendDays { get; init; }
 }
 
 public sealed class ProductFormViewModel
