@@ -12,7 +12,8 @@ Inventory and billing web app for a small shop, built with ASP.NET Core MVC (.NE
 | GitHub Actions CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) | Runs on every push and pull request to `main`: build (warnings are errors), vulnerable-package check, all unit and integration tests on `windows-latest` with LocalDB |
 | Dashboard charts and CSV export | Built and tested: 14-day sales chart, top products, CSV for daily sales, stock valuation and top products (admin) |
 | Stock ledger and supplier receiving | Built and tested: every stock change is a ledger row (sales via the trigger, restock/receipt/adjustment/opening via the app) |
-| Tests | `dotnet test` on this branch: 198 passed (124 unit, 74 integration) |
+| REST API | Built and tested: `/api/v1/products`, `/api/v1/stock-movements`, `/api/v1/reports/daily-sales`, Swagger UI at `/swagger` |
+| Tests | `dotnet test` on this branch: 213 passed (124 unit, 89 integration) |
 | IIS deployment | **Not done.** The app has only been run locally with `dotnet run` |
 
 | Dashboard | New sale (live search) |
@@ -46,6 +47,29 @@ C# 12, .NET 8, ASP.NET Core MVC with Razor views, EF Core 8, SQL Server (LocalDB
 
 ## Architecture
 
+```mermaid
+flowchart LR
+    Browser["Browser: Razor views, jQuery"] --> Web
+    Client["API client or Swagger UI"] --> Web
+    subgraph App["StockDesk.Web (ASP.NET Core)"]
+        Web["MVC controllers and /api/v1 controllers"]
+        Identity["Identity: cookie sign-in, Admin and Staff roles"]
+    end
+    Web --> Identity
+    Web --> Application["Application: services, IUnitOfWork"]
+    Application --> Domain["Domain: entities and rules"]
+    Application --> Infra["Infrastructure: EF Core repositories"]
+    Infra --> DB[("SQL Server")]
+    subgraph DBObjects["Inside SQL Server"]
+        Trigger["Trigger: reduce stock, write ledger row, raise alert"]
+        Procs["Stored procs: daily sales, stock valuation"]
+    end
+    DB --- Trigger
+    DB --- Procs
+```
+
+There is no SignalR or background worker in StockDesk: stock is kept consistent by the trigger inside the sale transaction.
+
 Clean Architecture: dependencies point inwards.
 
 ```
@@ -67,6 +91,27 @@ Choices worth knowing about:
 - **Bills never change.** Each sale line copies the product name, SKU and price at the time of sale. Products are deactivated rather than deleted.
 - **Concurrency.** Products carry a `rowversion`, so a restock or edit made from a stale copy (for example after a sale changed the stock) is rejected instead of overwriting the stock.
 - **Reports** come from two stored procedures. `usp_DailySales` groups by the shop's local date (sales are stored in UTC; `Shop:UtcOffsetMinutes`, default 330 for India) and turns the date range into UTC bounds so the `SoldAtUtc` index can be used. `usp_StockValuation` values active stock per category at cost and at selling price.
+
+## Design decisions
+
+- **Trigger-written ledger inside the sale transaction.** The sale-line trigger subtracts stock, writes the `Sale` ledger row and raises the low-stock alert in the same transaction as the bill. A rolled-back sale therefore leaves no ledger rows, and the ledger cannot drift from the product quantity (a test checks that the newest `QuantityAfter` equals the stock).
+- **Application layer without EF Core.** Services depend on repository interfaces, so business rules are unit tested with Moq and persistence is tested separately against real migrations on LocalDB.
+- **Stored procedures for reports, EF for everything else.** Date-range aggregation is done in T-SQL against the `SoldAtUtc` index; ordinary reads and writes stay in EF Core.
+- **Products are deactivated, not deleted,** and bill lines copy name, SKU and price, so old bills never change.
+- **API: reuse the cookie sign-in, read-only.** See the REST API section.
+
+## REST API
+
+Versioned under `/api/v1` (read-only). Interactive docs, generated from the XML comments, are at `/swagger` (OpenAPI JSON at `/swagger/v1/swagger.json`).
+
+| Endpoint | Who | Notes |
+|---|---|---|
+| `GET /api/v1/products` | Any signed-in user | `search`, `categoryId`, `lowStock`, `includeInactive`, `page`, `pageSize` (1 to 100, default 20); returns `items`, `page`, `pageSize`, `totalCount`, `totalPages` |
+| `GET /api/v1/products/{id}` | Any signed-in user | Adds cost price, category id and supplier |
+| `GET /api/v1/stock-movements` | Any signed-in user | Newest first; filter by `productId` and `type`; paged |
+| `GET /api/v1/reports/daily-sales` | Admin | `from`, `to` (max one year); from `usp_DailySales` |
+
+**Authentication.** The API uses the same ASP.NET Core Identity cookie as the web app: sign in at `/Account/Login`, then call the API from the same browser (Swagger UI "Try it out" works that way) or send the `StockDesk.Auth` cookie from a script. This was chosen over adding token issuing because every endpoint is a GET (so there is no CSRF exposure), the cookie is `HttpOnly` and `SameSite=Lax`, and it keeps one set of users, roles and lockout rules. For API paths the cookie middleware answers `401` (not signed in) or `403` (signed in, wrong role) instead of redirecting to the login page. Write endpoints or third-party clients would need bearer tokens first; that is not built.
 
 ## Features
 
@@ -135,8 +180,9 @@ Known limitations:
 dotnet test
 ```
 
+- **API tests:** 401 for anonymous calls (no redirect), 403 for staff on the admin report, filtering and paging, 400 on bad parameters, 404, and the Swagger document with XML comments.
 - **Unit tests (124 cases):** product, sale, category, supplier and alert rules, and the product, sale, catalog and alert services with a mocked unit of work.
-- **Integration tests (74 cases):** each class builds a throwaway LocalDB database from the real migrations and drops it afterwards, so LocalDB must be running. They cover the trigger (multi-line sales, a stale second till rolled back completely, low-stock alerts raised once until acknowledged, stale restock rejected), both stored procedures including local-date boundaries, repository search, error translation, the idempotent migration script applied twice to an empty database, and the web app through `WebApplicationFactory` (login, role checks, antiforgery, CRUD, AJAX search JSON, billing, reports, user creation).
+- **Integration tests (89 cases):** each class builds a throwaway LocalDB database from the real migrations and drops it afterwards, so LocalDB must be running. They cover the trigger (multi-line sales, a stale second till rolled back completely, low-stock alerts raised once until acknowledged, stale restock rejected), both stored procedures including local-date boundaries, repository search, error translation, the idempotent migration script applied twice to an empty database, and the web app through `WebApplicationFactory` (login, role checks, antiforgery, CRUD, AJAX search JSON, billing, reports, user creation).
 - **Overselling under load:** one test fires 25 parallel one-unit sales at a product with 10 in stock. Exactly 10 succeed and stock ends at 0, never below.
 
 To add a migration:
@@ -156,4 +202,5 @@ dotnet ef migrations add <Name> --project src/StockDesk.Infrastructure --startup
 - [x] jQuery AJAX live product search
 - [x] Printable bill
 - [x] GitHub Actions CI: build and test on every push
+- [x] Versioned REST API with Swagger
 - [ ] IIS deployment

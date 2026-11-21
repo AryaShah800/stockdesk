@@ -16,6 +16,9 @@ public interface IProductRepository : IRepository<Product>
 
     Task<bool> SkuExistsAsync(string sku, int? exceptProductId, CancellationToken ct = default);
 
+    /// <summary>Filtered, paged list with category and supplier, ordered by name.</summary>
+    Task<PagedResult<Product>> QueryAsync(ProductQuery query, CancellationToken ct = default);
+
     Task<int> CountLowStockAsync(CancellationToken ct = default);
 }
 
@@ -37,6 +40,9 @@ public interface ILowStockAlertRepository : IRepository<LowStockAlert>
 public interface IStockMovementRepository
 {
     void Add(StockMovement movement);
+
+    /// <summary>Filtered, paged ledger, newest first. Includes the product.</summary>
+    Task<PagedResult<StockMovement>> QueryAsync(StockMovementQuery query, CancellationToken ct = default);
 
     /// <summary>Newest first. Includes the product.</summary>
     Task<IReadOnlyList<StockMovement>> ListForProductAsync(int productId, int take, CancellationToken ct = default);
