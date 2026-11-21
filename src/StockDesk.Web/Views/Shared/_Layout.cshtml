@@ -1,58 +1,65 @@
+@{
+    var authed = User.Identity?.IsAuthenticated == true;
+    var ctrl = (ViewContext.RouteData.Values["controller"] as string) ?? "";
+    var act = (ViewContext.RouteData.Values["action"] as string) ?? "";
+    string Active(string c, string a = "") => ctrl == c && (a == "" || act == a) ? "active" : "";
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - StockDesk</title>
+    <script>try{var t=localStorage.getItem('sd-theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
-<body>
-    <header>
-        <nav class="navbar navbar-expand-md navbar-dark bg-dark mb-3">
-            <div class="container">
-                <a class="navbar-brand" asp-controller="Home" asp-action="Index">StockDesk</a>
-                @if (User.Identity?.IsAuthenticated == true)
+<body class="@(authed ? "app" : "auth")">
+    <partial name="_Icons" />
+    @if (authed)
+    {
+        <aside class="side" id="side">
+            <a class="brand" asp-controller="Home" asp-action="Index"><span class="brand-mark">S</span>StockDesk</a>
+            <nav class="side-nav" aria-label="Main">
+                <a class="@Active("Home")" asp-controller="Home" asp-action="Index"><svg class="ic"><use href="#i-home"/></svg>Dashboard</a>
+                <a class="@Active("Sales", "Create")" asp-controller="Sales" asp-action="Create"><svg class="ic"><use href="#i-sale"/></svg>New sale</a>
+                <a class="@(ctrl == "Sales" && act != "Create" ? "active" : "")" asp-controller="Sales" asp-action="Index"><svg class="ic"><use href="#i-bill"/></svg>Bills</a>
+                <a class="@Active("Products")" asp-controller="Products" asp-action="Index"><svg class="ic"><use href="#i-box"/></svg>Products</a>
+                <a class="@Active("Alerts")" asp-controller="Alerts" asp-action="Index"><svg class="ic"><use href="#i-alert"/></svg>Low stock</a>
+                @if (User.IsInRole(Roles.Admin))
                 {
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"
-                            aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                    <div class="collapse navbar-collapse" id="nav">
-                        <ul class="navbar-nav me-auto">
-                            <li class="nav-item"><a class="nav-link" asp-controller="Sales" asp-action="Create">New sale</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="Sales" asp-action="Index">Bills</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="Products" asp-action="Index">Products</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="Alerts" asp-action="Index">Low stock</a></li>
-                            @if (User.IsInRole(Roles.Admin))
-                            {
-                                <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Admin</a>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" asp-controller="Categories" asp-action="Index">Categories</a></li>
-                                        <li><a class="dropdown-item" asp-controller="Suppliers" asp-action="Index">Suppliers</a></li>
-                                        <li><a class="dropdown-item" asp-controller="Reports" asp-action="DailySales">Daily sales report</a></li>
-                                        <li><a class="dropdown-item" asp-controller="Reports" asp-action="StockValuation">Stock valuation</a></li>
-                                        <li><a class="dropdown-item" asp-controller="Users" asp-action="Index">Users</a></li>
-                                    </ul>
-                                </li>
-                            }
-                        </ul>
-                        <span class="navbar-text me-3 small">@User.Identity.Name (@(User.IsInRole(Roles.Admin) ? "Admin" : "Staff"))</span>
-                        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                            <button type="submit" class="btn btn-outline-light btn-sm">Log out</button>
-                        </form>
-                    </div>
+                    <div class="side-label">Admin</div>
+                    <a class="@Active("Categories")" asp-controller="Categories" asp-action="Index"><svg class="ic"><use href="#i-tag"/></svg>Categories</a>
+                    <a class="@Active("Suppliers")" asp-controller="Suppliers" asp-action="Index"><svg class="ic"><use href="#i-truck"/></svg>Suppliers</a>
+                    <a class="@Active("Reports", "DailySales")" asp-controller="Reports" asp-action="DailySales"><svg class="ic"><use href="#i-chart"/></svg>Daily sales</a>
+                    <a class="@Active("Reports", "StockValuation")" asp-controller="Reports" asp-action="StockValuation"><svg class="ic"><use href="#i-chart"/></svg>Stock valuation</a>
+                    <a class="@Active("Users")" asp-controller="Users" asp-action="Index"><svg class="ic"><use href="#i-users"/></svg>Users</a>
                 }
+            </nav>
+            <div class="side-foot">
+                <div class="who"><span class="who-name">@User.Identity!.Name</span><span class="who-role">@(User.IsInRole(Roles.Admin) ? "Admin" : "Staff")</span></div>
+                <div class="side-actions">
+                    <button type="button" class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode"><svg class="ic"><use href="#i-moon"/></svg></button>
+                    <form asp-controller="Account" asp-action="Logout" method="post"><button type="submit" class="icon-btn" aria-label="Log out" title="Log out"><svg class="ic"><use href="#i-out"/></svg></button></form>
+                </div>
             </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            <partial name="_Messages" />
-            @RenderBody()
-        </main>
-    </div>
+        </aside>
+        <div class="scrim" id="scrim"></div>
+        <div class="main-wrap">
+            <div class="topbar">
+                <button type="button" class="icon-btn" id="menu-toggle" aria-label="Open menu"><svg class="ic"><use href="#i-menu"/></svg></button>
+                <span class="brand-small">StockDesk</span>
+            </div>
+            <main role="main" class="content">
+                <partial name="_Messages" />
+                @RenderBody()
+            </main>
+        </div>
+    }
+    else
+    {
+        <main role="main" class="auth-wrap">@RenderBody()</main>
+    }
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

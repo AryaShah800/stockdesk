@@ -2,24 +2,31 @@
 @{
     ViewData["Title"] = "Log in";
 }
-<div class="row justify-content-center">
-    <div class="col-md-5">
-        <h1 class="h3 mb-3">Log in</h1>
-        <form asp-action="Login" method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="ReturnUrl" />
-            <div class="mb-3">
-                <label asp-for="Email" class="form-label"></label>
-                <input asp-for="Email" class="form-control" autocomplete="username" autofocus />
-                <span asp-validation-for="Email" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="Password" class="form-label"></label>
-                <input asp-for="Password" class="form-control" autocomplete="current-password" />
-                <span asp-validation-for="Password" class="text-danger"></span>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Log in</button>
-        </form>
+<section class="auth-aside">
+    <span class="brand"><span class="brand-mark">S</span>StockDesk</span>
+    <div>
+        <h2>Stock goes down when the bill goes out.</h2>
+        <p>Ring up sales, print the bill, and let the database keep the count. Low-stock alerts appear the moment a product hits its reorder level.</p>
     </div>
-</div>
+    <p class="mb-0 small">Inventory and billing for a small shop.</p>
+</section>
+<section class="auth-form">
+    <h1 class="h3 mb-1">Log in</h1>
+    <p class="page-sub mb-4">Use your staff or admin account.</p>
+    <form asp-action="Login" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <input type="hidden" asp-for="ReturnUrl" />
+        <div class="mb-3">
+            <label asp-for="Email" class="form-label"></label>
+            <input asp-for="Email" class="form-control" autocomplete="username" autofocus />
+            <span asp-validation-for="Email" class="text-danger"></span>
+        </div>
+        <div class="mb-4">
+            <label asp-for="Password" class="form-label"></label>
+            <input asp-for="Password" class="form-control" autocomplete="current-password" />
+            <span asp-validation-for="Password" class="text-danger"></span>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Log in</button>
+    </form>
+</section>
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

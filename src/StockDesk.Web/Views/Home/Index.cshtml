@@ -2,61 +2,71 @@
 @{
     ViewData["Title"] = "Dashboard";
 }
-<h1 class="h3 mb-3">Dashboard</h1>
+<div class="page-head">
+    <div>
+        <h1>Dashboard</h1>
+        <p class="page-sub">@DateTime.Now.ToString("dddd, d MMMM yyyy")</p>
+    </div>
+    <a class="btn btn-primary" asp-controller="Sales" asp-action="Create">New sale</a>
+</div>
 <div class="row g-3 mb-4">
-    <div class="col-md-4"><div class="card"><div class="card-body">
-        <div class="text-muted small">Bills today</div><div class="fs-3" id="today-bills">@Model.TodayBills</div>
-    </div></div></div>
-    <div class="col-md-4"><div class="card"><div class="card-body">
-        <div class="text-muted small">Revenue today</div><div class="fs-3" id="today-revenue">₹@Model.TodayRevenue.ToString("N2")</div>
-    </div></div></div>
-    <div class="col-md-4"><div class="card @(Model.LowStockProducts > 0 ? "border-warning" : "")"><div class="card-body">
-        <div class="text-muted small">Products at or below reorder level</div><div class="fs-3" id="low-stock-count">@Model.LowStockProducts</div>
-    </div></div></div>
+    <div class="col-md-4"><div class="stat">
+        <div class="stat-label">Bills today</div><div class="stat-value" id="today-bills">@Model.TodayBills</div>
+    </div></div>
+    <div class="col-md-4"><div class="stat">
+        <div class="stat-label">Revenue today</div><div class="stat-value" id="today-revenue">₹@Model.TodayRevenue.ToString("N2")</div>
+    </div></div>
+    <div class="col-md-4"><div class="stat @(Model.LowStockProducts > 0 ? "warn" : "")">
+        <div class="stat-label">Products at or below reorder level</div><div class="stat-value" id="low-stock-count">@Model.LowStockProducts</div>
+    </div></div>
 </div>
 
 <div class="row g-4">
-    <div class="col-lg-6">
-        <h2 class="h5">Open low-stock alerts</h2>
-        @if (Model.OpenAlerts.Count == 0)
-        {
-            <p class="text-muted">No open alerts.</p>
-        }
-        else
-        {
-            <ul class="list-group" id="open-alerts">
-                @foreach (var alert in Model.OpenAlerts)
-                {
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>@alert.Product?.Name <span class="text-muted small">(@alert.Product?.Sku)</span></span>
-                        <span class="badge text-bg-warning">@alert.QuantityAtAlert left, reorder at @alert.ReorderLevel</span>
-                    </li>
-                }
-            </ul>
-        }
-    </div>
-    <div class="col-lg-6">
-        <h2 class="h5">Recent bills</h2>
-        @if (Model.RecentSales.Count == 0)
-        {
-            <p class="text-muted">No sales yet. <a asp-controller="Sales" asp-action="Create">Make the first one.</a></p>
-        }
-        else
-        {
-            <table class="table table-sm">
-                <thead><tr><th>Bill</th><th>Customer</th><th class="text-end">Items</th><th class="text-end">Total</th></tr></thead>
-                <tbody>
-                    @foreach (var sale in Model.RecentSales)
+    <div class="col-lg-5">
+        <div class="panel">
+            <h2>Open low-stock alerts</h2>
+            @if (Model.OpenAlerts.Count == 0)
+            {
+                <div class="empty">Nothing to reorder right now.</div>
+            }
+            else
+            {
+                <div id="open-alerts">
+                    @foreach (var alert in Model.OpenAlerts)
                     {
-                        <tr>
-                            <td><a asp-controller="Sales" asp-action="Bill" asp-route-id="@sale.Id">@sale.BillNumber</a></td>
-                            <td>@(sale.CustomerName ?? "Walk-in")</td>
-                            <td class="text-end">@sale.ItemCount</td>
-                            <td class="text-end">₹@sale.Total.ToString("N2")</td>
-                        </tr>
+                        <div class="alert-row">
+                            <span>@alert.Product?.Name <span class="text-muted small">@alert.Product?.Sku</span></span>
+                            <span class="badge text-bg-warning">@alert.QuantityAtAlert left, reorder at @alert.ReorderLevel</span>
+                        </div>
                     }
-                </tbody>
-            </table>
-        }
+                </div>
+            }
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="panel">
+            <h2>Recent bills</h2>
+            @if (Model.RecentSales.Count == 0)
+            {
+                <div class="empty">No sales yet. <a asp-controller="Sales" asp-action="Create">Make the first one.</a></div>
+            }
+            else
+            {
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Bill</th><th>Customer</th><th class="text-end">Items</th><th class="text-end">Total</th></tr></thead>
+                    <tbody>
+                        @foreach (var sale in Model.RecentSales)
+                        {
+                            <tr>
+                                <td><a asp-controller="Sales" asp-action="Bill" asp-route-id="@sale.Id">@sale.BillNumber</a></td>
+                                <td>@(sale.CustomerName ?? "Walk-in")</td>
+                                <td class="text-end">@sale.ItemCount</td>
+                                <td class="text-end">₹@sale.Total.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
     </div>
 </div>
