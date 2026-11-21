@@ -33,3 +33,14 @@ public interface ILowStockAlertRepository : IRepository<LowStockAlert>
     /// <summary>Unacknowledged alerts with their product, oldest first.</summary>
     Task<IReadOnlyList<LowStockAlert>> ListOpenAsync(CancellationToken ct = default);
 }
+
+public interface IStockMovementRepository
+{
+    void Add(StockMovement movement);
+
+    /// <summary>Newest first. Includes the product.</summary>
+    Task<IReadOnlyList<StockMovement>> ListForProductAsync(int productId, int take, CancellationToken ct = default);
+
+    /// <summary>Newest first across all products. Includes the product.</summary>
+    Task<IReadOnlyList<StockMovement>> ListRecentAsync(int take, CancellationToken ct = default);
+}

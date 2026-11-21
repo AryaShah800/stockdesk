@@ -14,6 +14,7 @@ public sealed class StockDeskDbContext(DbContextOptions<StockDeskDbContext> opti
     public DbSet<Sale> Sales => Set<Sale>();
     public DbSet<SaleLine> SaleLines => Set<SaleLine>();
     public DbSet<LowStockAlert> LowStockAlerts => Set<LowStockAlert>();
+    public DbSet<StockMovement> StockMovements => Set<StockMovement>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

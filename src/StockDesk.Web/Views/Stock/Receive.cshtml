@@ -1,0 +1,39 @@
+@model ReceiveViewModel
+@{
+    ViewData["Title"] = "Receive stock";
+}
+<div class="page-head">
+    <div>
+        <h1>Receive from supplier</h1>
+        <p class="page-sub">Pick the supplier and list what arrived. Every line adds stock and writes a ledger entry.</p>
+    </div>
+</div>
+<form asp-action="Receive" method="post" class="panel" id="receive-form">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <div class="row g-3 mb-3">
+        <div class="col-md-6">
+            <label asp-for="SupplierId" class="form-label">Supplier</label>
+            <select asp-for="SupplierId" asp-items="Model.Suppliers" class="form-select"><option value="">Choose...</option></select>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="Reference" class="form-label">Delivery note or invoice no. (optional)</label>
+            <input asp-for="Reference" class="form-control" />
+        </div>
+    </div>
+    <table class="table align-middle">
+        <thead><tr><th>Product</th><th style="width:9rem">Quantity</th></tr></thead>
+        <tbody>
+            @for (var i = 0; i < Model.Lines.Count; i++)
+            {
+                <tr>
+                    <td>
+                        <select name="Lines[@i].ProductId" asp-items="Model.Products" class="form-select"><option value="0">-</option></select>
+                    </td>
+                    <td><input type="number" name="Lines[@i].Quantity" min="0" max="1000000" value="@Model.Lines[i].Quantity" class="form-control" /></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <button type="submit" class="btn btn-primary">Receive stock</button>
+    <a class="btn btn-link" asp-action="Ledger">Cancel</a>
+</form>

@@ -11,7 +11,8 @@ Inventory and billing web app for a small shop, built with ASP.NET Core MVC (.NE
 | Catalogue, roles, billing, printable bill, live search, trigger, reports | Built and tested (`dotnet test`) |
 | GitHub Actions CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) | Runs on every push and pull request to `main`: build (warnings are errors), vulnerable-package check, all unit and integration tests on `windows-latest` with LocalDB |
 | Dashboard charts and CSV export | Built and tested: 14-day sales chart, top products, CSV for daily sales, stock valuation and top products (admin) |
-| Tests | `dotnet test` on this branch: 179 passed (114 unit, 65 integration) |
+| Stock ledger and supplier receiving | Built and tested: every stock change is a ledger row (sales via the trigger, restock/receipt/adjustment/opening via the app) |
+| Tests | `dotnet test` on this branch: 198 passed (124 unit, 74 integration) |
 | IIS deployment | **Not done.** The app has only been run locally with `dotnet run` |
 
 | Dashboard | New sale (live search) |
@@ -21,6 +22,8 @@ Inventory and billing web app for a small shop, built with ASP.NET Core MVC (.NE
 | ![Products](docs/screenshots/products.png) | ![Dark mode](docs/screenshots/dashboard-dark.png) |
 | Login | Mobile |
 | ![Login](docs/screenshots/login.png) | ![Mobile](docs/screenshots/dashboard-mobile.png) |
+| Stock ledger for one product | |
+| ![Ledger](docs/screenshots/product-history.png) | |
 | Daily sales (with CSV export) | Printable bill |
 | ![Daily sales](docs/screenshots/daily-sales.png) | ![Bill](docs/screenshots/bill.png) |
 
@@ -76,6 +79,7 @@ Choices worth knowing about:
 | Low stock | Admin, Staff | Open alerts; Admin acknowledges |
 | Categories, Suppliers | Admin | Razor CRUD; deleting one that is still used is refused |
 | Daily sales, Stock valuation | Admin | Stored-procedure reports, each with an Export CSV button. Formula-looking cells are quoted so spreadsheets do not run them |
+| Stock ledger | Everyone reads, Admin writes | `/Stock/Ledger` lists movements (all products or one). Sales are written by the `trg_SaleLines_ReduceStock` trigger in the sale transaction, so a rolled-back sale leaves no rows. Admin can receive a delivery from a supplier (several products, one reference) and record adjustments with a mandatory reason. A migration turns existing stock into opening rows. `QuantityAfter` of the newest row equals the product quantity (tested) |
 | Dashboard charts | Everyone | Server-rendered SVG: revenue per day (usp_DailySales, gaps filled with zero) and top 5 products by revenue (one EF query over bill lines) |
 | Users | Admin | Create Admin or Staff accounts |
 
@@ -131,8 +135,8 @@ Known limitations:
 dotnet test
 ```
 
-- **Unit tests (114 cases):** product, sale, category, supplier and alert rules, and the product, sale, catalog and alert services with a mocked unit of work.
-- **Integration tests (65 cases):** each class builds a throwaway LocalDB database from the real migrations and drops it afterwards, so LocalDB must be running. They cover the trigger (multi-line sales, a stale second till rolled back completely, low-stock alerts raised once until acknowledged, stale restock rejected), both stored procedures including local-date boundaries, repository search, error translation, the idempotent migration script applied twice to an empty database, and the web app through `WebApplicationFactory` (login, role checks, antiforgery, CRUD, AJAX search JSON, billing, reports, user creation).
+- **Unit tests (124 cases):** product, sale, category, supplier and alert rules, and the product, sale, catalog and alert services with a mocked unit of work.
+- **Integration tests (74 cases):** each class builds a throwaway LocalDB database from the real migrations and drops it afterwards, so LocalDB must be running. They cover the trigger (multi-line sales, a stale second till rolled back completely, low-stock alerts raised once until acknowledged, stale restock rejected), both stored procedures including local-date boundaries, repository search, error translation, the idempotent migration script applied twice to an empty database, and the web app through `WebApplicationFactory` (login, role checks, antiforgery, CRUD, AJAX search JSON, billing, reports, user creation).
 - **Overselling under load:** one test fires 25 parallel one-unit sales at a product with 10 in stock. Exactly 10 succeed and stock ends at 0, never below.
 
 To add a migration:

@@ -51,6 +51,60 @@ public static class SqlObjects
         """;
 
     /// <summary>
+    /// The trigger with ledger rows (replaces <see cref="ReduceStockTriggerSql"/>; the first migration still creates
+    /// the original). For every inserted sale line it also writes a StockMovements row with the stock after that line.
+    /// The rows live in the same transaction as the sale, so a rolled-back sale leaves no ledger rows.
+    /// </summary>
+    public const string ReduceStockWithLedgerTriggerSql = """
+        CREATE TRIGGER dbo.trg_SaleLines_ReduceStock
+        ON dbo.SaleLines
+        AFTER INSERT
+        AS
+        BEGIN
+            SET NOCOUNT ON;
+            IF NOT EXISTS (SELECT 1 FROM inserted) RETURN;
+
+            UPDATE p
+               SET p.QuantityInStock = p.QuantityInStock - q.Qty
+              FROM dbo.Products AS p
+              JOIN (SELECT ProductId, SUM(Quantity) AS Qty FROM inserted GROUP BY ProductId) AS q
+                ON q.ProductId = p.Id;
+
+            IF EXISTS (SELECT 1
+                         FROM dbo.Products AS p
+                        WHERE p.QuantityInStock < 0
+                          AND p.Id IN (SELECT ProductId FROM inserted))
+                THROW 50001, 'Not enough stock for one or more items. Another sale may have used it first.', 1;
+
+            -- one ledger row per sold line; QuantityAfter is the stock right after that line when lines of the
+            -- same product are applied in Id order
+            INSERT INTO dbo.StockMovements (ProductId, Type, QuantityChange, QuantityAfter, PerformedBy, OccurredAtUtc, Reason, SaleId)
+            SELECT i.ProductId,
+                   'Sale',
+                   -i.Quantity,
+                   p.QuantityInStock + SUM(i.Quantity) OVER (PARTITION BY i.ProductId)
+                                     - SUM(i.Quantity) OVER (PARTITION BY i.ProductId ORDER BY i.Id ROWS UNBOUNDED PRECEDING),
+                   s.SoldBy,
+                   s.SoldAtUtc,
+                   'Bill ' + 'SD-' + RIGHT('000000' + CAST(s.Id AS varchar(10)), 6),
+                   s.Id
+              FROM inserted AS i
+              JOIN dbo.Products AS p ON p.Id = i.ProductId
+              JOIN dbo.Sales AS s ON s.Id = i.SaleId;
+
+            INSERT INTO dbo.LowStockAlerts (ProductId, QuantityAtAlert, ReorderLevel, RaisedAtUtc)
+            SELECT p.Id, p.QuantityInStock, p.ReorderLevel, SYSUTCDATETIME()
+              FROM dbo.Products AS p
+             WHERE p.Id IN (SELECT ProductId FROM inserted)
+               AND p.QuantityInStock <= p.ReorderLevel
+               AND NOT EXISTS (SELECT 1
+                                 FROM dbo.LowStockAlerts AS a
+                                WHERE a.ProductId = p.Id
+                                  AND a.AcknowledgedAtUtc IS NULL);
+        END
+        """;
+
+    /// <summary>
     /// Bills, items and revenue per local calendar day. Sales are stored in UTC; @UtcOffsetMinutes
     /// shifts them to the shop's time zone (330 for India). The date range is turned into UTC bounds
     /// so the SoldAtUtc index can be used.

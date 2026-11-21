@@ -36,7 +36,7 @@ public sealed class ProductsController(IUnitOfWork uow, ProductService products)
         if (!ModelState.IsValid)
             return View("Form", await WithListsAsync(model, ct));
 
-        var result = await products.CreateAsync(ToInput(model), ct);
+        var result = await products.CreateAsync(ToInput(model), ct, User.Identity!.Name);
         if (!result.Succeeded)
         {
             ModelState.AddModelError(string.Empty, result.Error!);
@@ -88,7 +88,7 @@ public sealed class ProductsController(IUnitOfWork uow, ProductService products)
     [Authorize(Policy = Policies.AdminOnly), HttpPost]
     public async Task<IActionResult> Restock(int id, int quantity, CancellationToken ct)
     {
-        var result = await products.RestockAsync(id, quantity, ct);
+        var result = await products.RestockAsync(id, quantity, ct, User.Identity!.Name);
         TempData[result.Succeeded ? "Message" : "Error"] = result.Succeeded ? $"Added {quantity} to stock." : result.Error;
         return RedirectToAction(nameof(Details), new { id });
     }

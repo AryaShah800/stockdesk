@@ -360,4 +360,75 @@ public sealed class WebAppTests(StockDeskApp app) : IClassFixture<StockDeskApp>
         var anonymous = await app.CreateBrowser().GetAsync(url);
         anonymous.Headers.Location!.ToString().Should().Contain("/Account/Login");
     }
+
+    [Fact]
+    public async Task Staff_can_read_the_ledger_but_not_receive_or_adjust_stock()
+    {
+        var products = await app.Database.SeedProductsAsync(("LEDGER-A", 10m, 20, 0));
+        var staff = await app.LoginAsync(StockDeskApp.StaffEmail);
+
+        (await staff.GetAsync("/Stock/Ledger")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await staff.GetAsync($"/Stock/Ledger?productId={products[0].Id}")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await staff.GetAsync("/Stock/Ledger?productId=99999999")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var receive = await staff.GetAsync("/Stock/Receive");
+        receive.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        receive.Headers.Location!.ToString().Should().Contain("/Account/AccessDenied");
+
+        var adjust = await StockDeskApp.PostFormAsync(staff, "/Stock/Ledger", "/Stock/Adjust", new()
+        {
+            ["productId"] = products[0].Id.ToString(), ["change"] = "-5", ["reason"] = "Sneaky",
+        });
+        adjust.Headers.Location!.ToString().Should().Contain("/Account/AccessDenied");
+        (await app.Database.StockOfAsync(products[0].Id)).Should().Be(20);
+    }
+
+    [Fact]
+    public async Task Admin_receives_stock_from_a_supplier_adjusts_it_and_sees_both_in_the_ledger()
+    {
+        var products = await app.Database.SeedProductsAsync(("LEDGER-B", 10m, 5, 0));
+        int supplierId;
+        await using (var db = app.Database.CreateContext())
+        {
+            var supplier = new StockDesk.Domain.Entities.Supplier("Receiving Test Traders");
+            db.Suppliers.Add(supplier);
+            await db.SaveChangesAsync();
+            supplierId = supplier.Id;
+        }
+        var admin = await app.LoginAsync(StockDeskApp.AdminEmail);
+
+        (await admin.GetAsync("/Stock/Receive")).StatusCode.Should().Be(HttpStatusCode.OK);
+        var received = await StockDeskApp.PostFormAsync(admin, "/Stock/Receive", "/Stock/Receive", new()
+        {
+            ["SupplierId"] = supplierId.ToString(), ["Reference"] = "DN-77",
+            ["Lines[0].ProductId"] = products[0].Id.ToString(), ["Lines[0].Quantity"] = "25",
+            ["Lines[1].ProductId"] = "0", ["Lines[1].Quantity"] = "",
+        });
+        received.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        var adjusted = await StockDeskApp.PostFormAsync(admin, $"/Stock/Ledger?productId={products[0].Id}", "/Stock/Adjust", new()
+        {
+            ["productId"] = products[0].Id.ToString(), ["change"] = "-2", ["reason"] = "Damaged carton",
+        });
+        adjusted.StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+        (await app.Database.StockOfAsync(products[0].Id)).Should().Be(28);
+        var page = await admin.GetStringAsync($"/Stock/Ledger?productId={products[0].Id}");
+        page.Should().Contain("Received from Receiving Test Traders").And.Contain("DN-77").And.Contain("Damaged carton")
+            .And.Contain("&#x2B;25").And.Contain("-2");
+    }
+
+    [Fact]
+    public async Task Receiving_with_no_supplier_or_no_lines_shows_an_error_and_changes_nothing()
+    {
+        var products = await app.Database.SeedProductsAsync(("LEDGER-C", 10m, 5, 0));
+        var admin = await app.LoginAsync(StockDeskApp.AdminEmail);
+
+        var response = await StockDeskApp.PostFormAsync(admin, "/Stock/Receive", "/Stock/Receive", new()
+        {
+            ["Lines[0].ProductId"] = products[0].Id.ToString(), ["Lines[0].Quantity"] = "9",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Choose the supplier.");
+        (await app.Database.StockOfAsync(products[0].Id)).Should().Be(5);
+    }
 }

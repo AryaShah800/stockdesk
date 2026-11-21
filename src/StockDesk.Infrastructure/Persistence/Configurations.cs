@@ -101,3 +101,20 @@ internal sealed class LowStockAlertConfiguration : IEntityTypeConfiguration<LowS
             .HasDatabaseName("UX_LowStockAlerts_ProductId_Open");
     }
 }
+
+internal sealed class StockMovementConfiguration : IEntityTypeConfiguration<StockMovement>
+{
+    public void Configure(EntityTypeBuilder<StockMovement> b)
+    {
+        b.ToTable("StockMovements");
+        b.Property(m => m.Type).HasConversion<string>().HasMaxLength(20);
+        b.Property(m => m.PerformedBy).HasMaxLength(StockDesk.Domain.Entities.Sale.SoldByMaxLength).IsRequired();
+        b.Property(m => m.Reason).HasMaxLength(StockMovement.ReasonMaxLength);
+        b.Property(m => m.Reference).HasMaxLength(StockMovement.ReferenceMaxLength);
+        b.Property(m => m.OccurredAtUtc).HasConversion(UtcConverters.Utc);
+        b.HasOne(m => m.Product).WithMany().HasForeignKey(m => m.ProductId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Supplier>().WithMany().HasForeignKey(m => m.SupplierId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Sale>().WithMany().HasForeignKey(m => m.SaleId).OnDelete(DeleteBehavior.Restrict);
+        b.HasIndex(m => new { m.ProductId, m.OccurredAtUtc });
+    }
+}

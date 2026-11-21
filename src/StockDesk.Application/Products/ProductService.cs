@@ -24,11 +24,13 @@ public sealed record ProductSearchResult(
     int QuantityInStock,
     bool IsLowStock);
 
-public sealed class ProductService(IUnitOfWork uow)
+public sealed class ProductService(IUnitOfWork uow, TimeProvider? clock = null)
 {
+    private DateTime Now => (clock ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+
     public const int MaxSearchResults = 20;
 
-    public async Task<Result<int>> CreateAsync(ProductInput input, CancellationToken ct = default)
+    public async Task<Result<int>> CreateAsync(ProductInput input, CancellationToken ct = default, string? performedBy = null)
     {
         ArgumentNullException.ThrowIfNull(input);
         try
@@ -43,6 +45,9 @@ public sealed class ProductService(IUnitOfWork uow)
                 return Result<int>.Failure($"SKU {product.Sku} is already used.");
 
             uow.Products.Add(product);
+            if (product.QuantityInStock > 0)
+                uow.StockMovements.Add(new StockMovement(product, MovementType.Opening, product.QuantityInStock,
+                    product.QuantityInStock, performedBy ?? "system", Now, "Opening stock"));
             await uow.SaveChangesAsync(ct);
             return Result<int>.Success(product.Id);
         }
@@ -84,7 +89,7 @@ public sealed class ProductService(IUnitOfWork uow)
         }
     }
 
-    public async Task<Result> RestockAsync(int id, int quantity, CancellationToken ct = default)
+    public async Task<Result> RestockAsync(int id, int quantity, CancellationToken ct = default, string? performedBy = null)
     {
         var product = await uow.Products.GetByIdAsync(id, ct);
         if (product is null)
@@ -93,6 +98,8 @@ public sealed class ProductService(IUnitOfWork uow)
         try
         {
             product.Restock(quantity);
+            uow.StockMovements.Add(new StockMovement(product, MovementType.Restock, quantity, product.QuantityInStock,
+                performedBy ?? "system", Now, "Manual restock"));
             await uow.SaveChangesAsync(ct);
             return Result.Success();
         }

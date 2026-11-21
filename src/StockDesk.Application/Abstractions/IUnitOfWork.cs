@@ -13,6 +13,7 @@ public interface IUnitOfWork
     IProductRepository Products { get; }
     ISaleRepository Sales { get; }
     ILowStockAlertRepository LowStockAlerts { get; }
+    IStockMovementRepository StockMovements { get; }
 
     /// <exception cref="InsufficientStockException">The stock trigger rejected a sale.</exception>
     /// <exception cref="DuplicateValueException">A unique value (such as a SKU) is already used.</exception>

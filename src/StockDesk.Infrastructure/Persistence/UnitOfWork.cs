@@ -12,12 +12,14 @@ internal sealed class UnitOfWork(StockDeskDbContext db) : IUnitOfWork
     private IProductRepository? _products;
     private ISaleRepository? _sales;
     private ILowStockAlertRepository? _alerts;
+    private IStockMovementRepository? _movements;
 
     public IRepository<Category> Categories => _categories ??= new Repository<Category>(db);
     public IRepository<Supplier> Suppliers => _suppliers ??= new Repository<Supplier>(db);
     public IProductRepository Products => _products ??= new ProductRepository(db);
     public ISaleRepository Sales => _sales ??= new SaleRepository(db);
     public ILowStockAlertRepository LowStockAlerts => _alerts ??= new LowStockAlertRepository(db);
+    public IStockMovementRepository StockMovements => _movements ??= new StockMovementRepository(db);
 
     public async Task<int> SaveChangesAsync(CancellationToken ct = default)
     {
