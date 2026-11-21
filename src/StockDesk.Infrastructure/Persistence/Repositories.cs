@@ -59,6 +59,27 @@ internal sealed class ProductRepository(StockDeskDbContext db) : Repository<Prod
             .ToListAsync(ct);
     }
 
+    public async Task<PagedResult<Product>> QueryAsync(ProductQuery q, CancellationToken ct = default)
+    {
+        var query = Set.AsNoTracking().Include(p => p.Category).Include(p => p.Supplier).AsQueryable();
+        if (!q.IncludeInactive)
+            query = query.Where(p => p.IsActive);
+        if (q.CategoryId is int categoryId)
+            query = query.Where(p => p.CategoryId == categoryId);
+        if (q.LowStockOnly)
+            query = query.Where(p => p.QuantityInStock <= p.ReorderLevel);
+        if (!string.IsNullOrWhiteSpace(q.Search))
+        {
+            var term = q.Search.Trim();
+            var sku = term.ToUpperInvariant();
+            query = query.Where(p => p.Name.Contains(term) || p.Sku.Contains(sku));
+        }
+        var total = await query.CountAsync(ct);
+        var items = await query.OrderBy(p => p.Name).ThenBy(p => p.Id)
+            .Skip((q.Page - 1) * q.PageSize).Take(q.PageSize).ToListAsync(ct);
+        return new PagedResult<Product>(items, q.Page, q.PageSize, total);
+    }
+
     public Task<bool> SkuExistsAsync(string sku, int? exceptProductId, CancellationToken ct = default) =>
         Set.AnyAsync(p => p.Sku == sku && (exceptProductId == null || p.Id != exceptProductId), ct);
 
@@ -98,6 +119,19 @@ internal sealed class LowStockAlertRepository(StockDeskDbContext db) : Repositor
 internal sealed class StockMovementRepository(StockDeskDbContext db) : IStockMovementRepository
 {
     public void Add(StockMovement movement) => db.StockMovements.Add(movement);
+
+    public async Task<PagedResult<StockMovement>> QueryAsync(StockMovementQuery q, CancellationToken ct = default)
+    {
+        var query = db.StockMovements.AsNoTracking().Include(m => m.Product).AsQueryable();
+        if (q.ProductId is int productId)
+            query = query.Where(m => m.ProductId == productId);
+        if (q.Type is MovementType type)
+            query = query.Where(m => m.Type == type);
+        var total = await query.CountAsync(ct);
+        var items = await query.OrderByDescending(m => m.OccurredAtUtc).ThenByDescending(m => m.Id)
+            .Skip((q.Page - 1) * q.PageSize).Take(q.PageSize).ToListAsync(ct);
+        return new PagedResult<StockMovement>(items, q.Page, q.PageSize, total);
+    }
 
     public async Task<IReadOnlyList<StockMovement>> ListForProductAsync(int productId, int take, CancellationToken ct = default) =>
         await db.StockMovements.AsNoTracking().Include(m => m.Product)

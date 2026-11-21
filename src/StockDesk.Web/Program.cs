@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -7,6 +9,7 @@ using StockDesk.Application.Common;
 using StockDesk.Infrastructure;
 using StockDesk.Infrastructure.Identity;
 using StockDesk.Infrastructure.Persistence;
+using Microsoft.OpenApi.Models;
 using StockDesk.Web;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +40,19 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.SlidingExpiration = true;
+
+    // The API is called by scripts and Swagger, not browsers following redirects: answer 401/403 instead.
+    options.Events.OnRedirectToLogin = ctx => ApiOr(ctx, StatusCodes.Status401Unauthorized);
+    options.Events.OnRedirectToAccessDenied = ctx => ApiOr(ctx, StatusCodes.Status403Forbidden);
+
+    static Task ApiOr(RedirectContext<CookieAuthenticationOptions> ctx, int status)
+    {
+        if (ctx.Request.Path.StartsWithSegments("/api"))
+            ctx.Response.StatusCode = status;
+        else
+            ctx.Response.Redirect(ctx.RedirectUri);
+        return Task.CompletedTask;
+    }
 });
 
 builder.Services.AddAuthorization(options =>
@@ -48,6 +64,25 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddControllersWithViews(options =>
     options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
+
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "StockDesk API",
+        Version = "v1",
+        Description = "Read-only API over products, the stock ledger and sales reports. " +
+                      "It uses the same cookie sign-in as the web app: sign in at /Account/Login, then call the API or Swagger UI from the same browser.",
+    });
+    options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, $"{typeof(Program).Assembly.GetName().Name}.xml"));
+    options.AddSecurityDefinition("cookie", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.ApiKey,
+        In = ParameterLocation.Cookie,
+        Name = "StockDesk.Auth",
+        Description = "Auth cookie set by /Account/Login (the browser sends it automatically).",
+    });
+});
 
 var app = builder.Build();
 
@@ -76,6 +111,10 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseSwagger();
+app.UseSwaggerUI(o => o.SwaggerEndpoint("/swagger/v1/swagger.json", "StockDesk API v1"));
+
+app.MapControllers();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
