@@ -19,6 +19,17 @@ Inventory and billing web app for a small shop, built with ASP.NET Core MVC (.NE
 
 The screenshots were taken from a local run with the demo data (`Seed:DemoData`).
 
+## Run it with one command (Docker)
+
+Needs Docker only (no .NET SDK, no LocalDB).
+
+```bash
+cp .env.example .env        # compose refuses to start without it
+docker compose up --build
+```
+
+Starts SQL Server 2022, then the web app, which applies the migrations, creates the Admin account from `.env` and loads the demo catalogue (`Seed__DemoData`). Open http://localhost:8089 (change with `WEB_PORT`) and sign in with `admin@stockdesk.example` / `Demo-Admin-2026!` (demo values from `.env.example`). Remove everything with `docker compose down -v`. The image is amd64 (SQL Server image).
+
 ## Tech stack
 
 C# 12, .NET 8, ASP.NET Core MVC with Razor views, EF Core 8, SQL Server (LocalDB for development), T-SQL trigger and stored procedures, ASP.NET Core Identity (cookie login, Admin and Staff roles), Bootstrap 5, jQuery AJAX, xUnit, Moq, FluentAssertions, GitHub Actions.
