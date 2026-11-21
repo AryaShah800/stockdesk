@@ -2,7 +2,10 @@
 @{
     ViewData["Title"] = "Stock valuation";
 }
-<h1 class="h3 mb-3">Stock valuation</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Stock valuation</h1>
+    <a id="export-csv" class="btn btn-outline-secondary" asp-action="StockValuationCsv">Export CSV</a>
+</div>
 <p class="text-muted small">From the <code>usp_StockValuation</code> stored procedure. Active products only.</p>
 <table class="table" id="stock-valuation">
     <thead><tr><th>Category</th><th class="text-end">Products</th><th class="text-end">Units</th><th class="text-end">Value at cost</th><th class="text-end">Value at selling price</th></tr></thead>

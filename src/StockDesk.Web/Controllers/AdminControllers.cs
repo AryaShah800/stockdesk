@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using StockDesk.Application.Abstractions;
 using StockDesk.Application.Alerts;
 using StockDesk.Application.Common;
+using StockDesk.Application.Reports;
 using StockDesk.Web.Models;
 
 namespace StockDesk.Web.Controllers;
@@ -28,6 +29,43 @@ public sealed class ReportsController(IReportService reports, ShopClock clock) :
 
     public async Task<IActionResult> StockValuation(CancellationToken ct) =>
         View(await reports.GetStockValuationAsync(ct));
+
+    public async Task<IActionResult> DailySalesCsv(DateOnly? from, DateOnly? to, CancellationToken ct)
+    {
+        var end = to ?? clock.Today;
+        var start = from ?? end.AddDays(-6);
+        if (end < start || end.DayNumber - start.DayNumber > 366)
+            return BadRequest("Choose a range of at most one year, with the start before the end.");
+        var rows = await reports.GetDailySalesAsync(start, end, ct);
+        return Csv($"daily-sales-{start:yyyy-MM-dd}-to-{end:yyyy-MM-dd}.csv",
+            ["Date", "Bills", "Items sold", "Revenue"],
+            rows.Select(r => new object?[] { r.SaleDate, r.Bills, r.ItemsSold, r.Revenue }));
+    }
+
+    public async Task<IActionResult> StockValuationCsv(CancellationToken ct)
+    {
+        var rows = await reports.GetStockValuationAsync(ct);
+        return Csv($"stock-valuation-{clock.Today:yyyy-MM-dd}.csv",
+            ["Category", "Products", "Units", "Value at cost", "Value at selling price"],
+            rows.Select(r => new object?[] { r.Category, r.Products, r.Units, r.CostValue, r.RetailValue }));
+    }
+
+    public async Task<IActionResult> TopProductsCsv(DateOnly? from, DateOnly? to, CancellationToken ct)
+    {
+        var end = to ?? clock.Today;
+        var start = from ?? end.AddDays(-29);
+        if (end < start || end.DayNumber - start.DayNumber > 366)
+            return BadRequest("Choose a range of at most one year, with the start before the end.");
+        var rows = await reports.GetTopProductsAsync(start, end, 50, ct);
+        return Csv($"top-products-{start:yyyy-MM-dd}-to-{end:yyyy-MM-dd}.csv",
+            ["SKU", "Product", "Units sold", "Revenue"],
+            rows.Select(r => new object?[] { r.Sku, r.ProductName, r.Units, r.Revenue }));
+    }
+
+    private FileContentResult Csv(string fileName, string[] header, IEnumerable<object?[]> rows) =>
+        File(new System.Text.UTF8Encoding(true).GetPreamble()
+                .Concat(System.Text.Encoding.UTF8.GetBytes(CsvWriter.Write(header, rows))).ToArray(),
+            "text/csv; charset=utf-8", fileName);
 }
 
 public sealed class AlertsController(IUnitOfWork uow, AlertService alerts) : Controller

@@ -13,6 +13,7 @@
         <input type="date" id="to" name="to" value="@Model.To.ToString("yyyy-MM-dd")" class="form-control" />
     </div>
     <div class="col-auto"><button type="submit" class="btn btn-primary">Show</button></div>
+    <div class="col-auto"><a id="export-csv" class="btn btn-outline-secondary" asp-action="DailySalesCsv" asp-route-from="@Model.From.ToString("yyyy-MM-dd")" asp-route-to="@Model.To.ToString("yyyy-MM-dd")">Export CSV</a></div>
 </form>
 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 <p class="text-muted small">From the <code>usp_DailySales</code> stored procedure. Days are in the shop's time zone.</p>

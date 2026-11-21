@@ -298,4 +298,66 @@ public sealed class WebAppTests(StockDeskApp app) : IClassFixture<StockDeskApp>
 
         (await staff.GetAsync("/")).Headers.Location!.ToString().Should().Contain("/Account/Login");
     }
+
+    [Fact]
+    public async Task Dashboard_shows_the_sales_trend_and_top_products_to_staff()
+    {
+        var products = await app.Database.SeedProductsAsync(("CHART-A", 40m, 50, 0));
+        var staff = await app.LoginAsync(StockDeskApp.StaffEmail);
+        (await StockDeskApp.PostFormAsync(staff, "/Sales/Create", "/Sales/Create", new()
+        {
+            ["Lines[0].ProductId"] = products[0].Id.ToString(), ["Lines[0].Quantity"] = "3",
+        })).StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+        var html = await staff.GetStringAsync("/");
+
+        html.Should().Contain("id=\"sales-trend\"").And.Contain("id=\"top-products\"")
+            .And.Contain("Product CHART-A").And.Contain("3 units, CHART-A");
+    }
+
+    [Theory]
+    [InlineData("/Reports/DailySalesCsv", "Date,Bills,Items sold,Revenue")]
+    [InlineData("/Reports/StockValuationCsv", "Category,Products,Units,Value at cost,Value at selling price")]
+    [InlineData("/Reports/TopProductsCsv", "SKU,Product,Units sold,Revenue")]
+    public async Task Admin_downloads_csv_exports_with_a_header_row(string url, string header)
+    {
+        var admin = await app.LoginAsync(StockDeskApp.AdminEmail);
+
+        var response = await admin.GetAsync(url);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("text/csv");
+        response.Content.Headers.ContentDisposition!.FileName.Should().EndWith(".csv");
+        (await response.Content.ReadAsStringAsync()).Should().Contain(header);
+    }
+
+    [Fact]
+    public async Task Csv_export_contains_the_sale_and_rejects_a_reversed_range()
+    {
+        var products = await app.Database.SeedProductsAsync(("CSV-A", 20m, 50, 0));
+        var staff = await app.LoginAsync(StockDeskApp.StaffEmail);
+        await StockDeskApp.PostFormAsync(staff, "/Sales/Create", "/Sales/Create", new()
+        {
+            ["Lines[0].ProductId"] = products[0].Id.ToString(), ["Lines[0].Quantity"] = "2",
+        });
+        var admin = await app.LoginAsync(StockDeskApp.AdminEmail);
+
+        (await admin.GetStringAsync("/Reports/TopProductsCsv")).Should().Contain("CSV-A,Product CSV-A,2,40.00");
+        (await admin.GetAsync("/Reports/DailySalesCsv?from=2026-11-10&to=2026-11-01")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Theory]
+    [InlineData("/Reports/DailySalesCsv")]
+    [InlineData("/Reports/StockValuationCsv")]
+    [InlineData("/Reports/TopProductsCsv")]
+    public async Task Staff_and_anonymous_users_cannot_export_reports(string url)
+    {
+        var staff = await app.LoginAsync(StockDeskApp.StaffEmail);
+        var staffResponse = await staff.GetAsync(url);
+        staffResponse.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        staffResponse.Headers.Location!.ToString().Should().Contain("/Account/AccessDenied");
+
+        var anonymous = await app.CreateBrowser().GetAsync(url);
+        anonymous.Headers.Location!.ToString().Should().Contain("/Account/Login");
+    }
 }

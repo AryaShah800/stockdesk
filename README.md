@@ -10,7 +10,8 @@ Inventory and billing web app for a small shop, built with ASP.NET Core MVC (.NE
 |---|---|
 | Catalogue, roles, billing, printable bill, live search, trigger, reports | Built and tested (`dotnet test`) |
 | GitHub Actions CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) | Runs on every push and pull request to `main`: build (warnings are errors), vulnerable-package check, all unit and integration tests on `windows-latest` with LocalDB |
-| Tests | 109 xUnit test methods, 158 test cases with theory data (103 unit, 55 integration) |
+| Dashboard charts and CSV export | Built and tested: 14-day sales chart, top products, CSV for daily sales, stock valuation and top products (admin) |
+| Tests | `dotnet test` on this branch: 179 passed (114 unit, 65 integration) |
 | IIS deployment | **Not done.** The app has only been run locally with `dotnet run` |
 
 | Dashboard | New sale (live search) |
@@ -20,6 +21,8 @@ Inventory and billing web app for a small shop, built with ASP.NET Core MVC (.NE
 | ![Products](docs/screenshots/products.png) | ![Dark mode](docs/screenshots/dashboard-dark.png) |
 | Login | Mobile |
 | ![Login](docs/screenshots/login.png) | ![Mobile](docs/screenshots/dashboard-mobile.png) |
+| Daily sales (with CSV export) | Printable bill |
+| ![Daily sales](docs/screenshots/daily-sales.png) | ![Bill](docs/screenshots/bill.png) |
 
 The UI is a custom design system (`wwwroot/css/site.css`) on top of Bootstrap's grid: sidebar shell, ledger palette, tabular numbers, dark mode (remembered in the browser), responsive down to phone width. Screenshots are from the Docker demo data (`Seed__DemoData`: 6 products and 14 days of bills created through the normal sale path, so the stock trigger and low-stock alerts ran).
 
@@ -72,7 +75,8 @@ Choices worth knowing about:
 | Products | Admin, Staff | List with live search; Admin adds, edits, restocks, deactivates |
 | Low stock | Admin, Staff | Open alerts; Admin acknowledges |
 | Categories, Suppliers | Admin | Razor CRUD; deleting one that is still used is refused |
-| Daily sales, Stock valuation | Admin | Stored-procedure reports |
+| Daily sales, Stock valuation | Admin | Stored-procedure reports, each with an Export CSV button. Formula-looking cells are quoted so spreadsheets do not run them |
+| Dashboard charts | Everyone | Server-rendered SVG: revenue per day (usp_DailySales, gaps filled with zero) and top 5 products by revenue (one EF query over bill lines) |
 | Users | Admin | Create Admin or Staff accounts |
 
 ## Getting started
@@ -127,8 +131,8 @@ Known limitations:
 dotnet test
 ```
 
-- **Unit tests (103 cases):** product, sale, category, supplier and alert rules, and the product, sale, catalog and alert services with a mocked unit of work.
-- **Integration tests (55 cases):** each class builds a throwaway LocalDB database from the real migrations and drops it afterwards, so LocalDB must be running. They cover the trigger (multi-line sales, a stale second till rolled back completely, low-stock alerts raised once until acknowledged, stale restock rejected), both stored procedures including local-date boundaries, repository search, error translation, the idempotent migration script applied twice to an empty database, and the web app through `WebApplicationFactory` (login, role checks, antiforgery, CRUD, AJAX search JSON, billing, reports, user creation).
+- **Unit tests (114 cases):** product, sale, category, supplier and alert rules, and the product, sale, catalog and alert services with a mocked unit of work.
+- **Integration tests (65 cases):** each class builds a throwaway LocalDB database from the real migrations and drops it afterwards, so LocalDB must be running. They cover the trigger (multi-line sales, a stale second till rolled back completely, low-stock alerts raised once until acknowledged, stale restock rejected), both stored procedures including local-date boundaries, repository search, error translation, the idempotent migration script applied twice to an empty database, and the web app through `WebApplicationFactory` (login, role checks, antiforgery, CRUD, AJAX search JSON, billing, reports, user creation).
 - **Overselling under load:** one test fires 25 parallel one-unit sales at a product with 10 in stock. Exactly 10 succeed and stock ends at 0, never below.
 
 To add a migration:
