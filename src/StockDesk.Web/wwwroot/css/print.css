@@ -1,7 +1,18 @@
 .bill {
-  border: 1px solid #dee2e6;
-  padding: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.75rem 1.75rem 1.5rem;
+  color: var(--ink);
 }
+.bill header h1 { font-family: var(--font-display); font-weight: 650; letter-spacing: -.01em; }
+.bill .table { --bs-table-bg: transparent; --bs-table-border-color: var(--line); margin-bottom: 0; }
+.bill .table thead th { background: var(--accent-soft); color: var(--ink); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+.bill .table tfoot th { font-size: 1.05rem; background: transparent; }
+.no-print .btn-outline-secondary { color: var(--ink-2); border-color: var(--line); }
+.no-print .btn-link { color: var(--accent); }
 
 @media print {
   @page {
