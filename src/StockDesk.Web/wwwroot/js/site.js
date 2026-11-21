@@ -134,3 +134,21 @@
         reindex();
     }
 })(jQuery);
+
+// Shell: dark mode toggle (remembered per browser) and the mobile menu.
+(function () {
+    'use strict';
+    var root = document.documentElement;
+    var toggle = document.getElementById('theme-toggle');
+    if (toggle) {
+        toggle.addEventListener('click', function () {
+            var next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+            root.dataset.theme = next;
+            try { localStorage.setItem('sd-theme', next); } catch (e) { /* storage may be blocked */ }
+        });
+    }
+    var side = document.getElementById('side'), scrim = document.getElementById('scrim'), menu = document.getElementById('menu-toggle');
+    function setOpen(open) { if (side) { side.classList.toggle('open', open); } if (scrim) { scrim.classList.toggle('open', open); } }
+    if (menu) { menu.addEventListener('click', function () { setOpen(true); }); }
+    if (scrim) { scrim.addEventListener('click', function () { setOpen(false); }); }
+})();

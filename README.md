@@ -13,11 +13,15 @@ Inventory and billing web app for a small shop, built with ASP.NET Core MVC (.NE
 | Tests | 109 xUnit test methods, 158 test cases with theory data (103 unit, 55 integration) |
 | IIS deployment | **Not done.** The app has only been run locally with `dotnet run` |
 
-| New sale (jQuery AJAX search) | Printable bill |
+| Dashboard | New sale (live search) |
 |---|---|
-| ![New sale](docs/screenshots/new-sale.png) | ![Bill](docs/screenshots/bill.png) |
+| ![Dashboard](docs/screenshots/dashboard.png) | ![New sale](docs/screenshots/new-sale.png) |
+| Products | Dark mode |
+| ![Products](docs/screenshots/products.png) | ![Dark mode](docs/screenshots/dashboard-dark.png) |
+| Login | Mobile |
+| ![Login](docs/screenshots/login.png) | ![Mobile](docs/screenshots/dashboard-mobile.png) |
 
-The screenshots were taken from a local run with the demo data (`Seed:DemoData`).
+The UI is a custom design system (`wwwroot/css/site.css`) on top of Bootstrap's grid: sidebar shell, ledger palette, tabular numbers, dark mode (remembered in the browser), responsive down to phone width. Screenshots are from the Docker demo data (`Seed__DemoData`: 6 products and 14 days of bills created through the normal sale path, so the stock trigger and low-stock alerts ran).
 
 ## Run it with one command (Docker)
 
