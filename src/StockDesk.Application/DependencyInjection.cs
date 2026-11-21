@@ -12,6 +12,7 @@ public static class DependencyInjection
     {
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<ProductService>();
+        services.AddScoped<StockLedgerService>();
         services.AddScoped<SaleService>();
         services.AddScoped<CatalogService>();
         services.AddScoped<AlertService>();

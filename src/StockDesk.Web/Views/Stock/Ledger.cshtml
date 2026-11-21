@@ -1,0 +1,73 @@
+@using StockDesk.Domain.Entities
+@model LedgerViewModel
+@inject ShopClock Clock
+@{
+    ViewData["Title"] = Model.Product is null ? "Stock ledger" : $"Ledger: {Model.Product.Name}";
+}
+<div class="page-head">
+    <div>
+        <h1>@(Model.Product is null ? "Stock ledger" : Model.Product.Name)</h1>
+        <p class="page-sub">
+            @if (Model.Product is null) { <text>The latest 100 stock movements across all products.</text> }
+            else { <text>@Model.Product.Sku. In stock now: <strong id="quantity-in-stock">@Model.Product.QuantityInStock</strong>. The latest 100 movements, newest first.</text> }
+        </p>
+    </div>
+    @if (User.IsInRole(StockDesk.Application.Common.Roles.Admin))
+    {
+        <a class="btn btn-primary" asp-action="Receive">Receive from supplier</a>
+    }
+</div>
+
+@if (Model.Product is not null && Model.CanAdjust)
+{
+    <form asp-action="Adjust" method="post" class="panel mb-4 d-flex flex-wrap gap-3 align-items-end">
+        <input type="hidden" name="productId" value="@Model.Product.Id" />
+        <div>
+            <label for="change" class="form-label small mb-0">Adjust by (use a minus to reduce)</label>
+            <input type="number" id="change" name="change" class="form-control" style="width:10rem" required />
+        </div>
+        <div class="flex-grow-1">
+            <label for="reason" class="form-label small mb-0">Reason</label>
+            <input type="text" id="reason" name="reason" maxlength="@StockMovement.ReasonMaxLength" class="form-control" placeholder="Damaged, miscount, expired..." required />
+        </div>
+        <button type="submit" class="btn btn-outline-secondary">Record adjustment</button>
+    </form>
+}
+
+@if (Model.Movements.Count == 0)
+{
+    <div class="panel"><div class="empty">No stock movements yet.</div></div>
+}
+else
+{
+    <table class="table align-middle" id="ledger">
+        <thead>
+            <tr>
+                <th>When</th>
+                @if (Model.Product is null) { <th>Product</th> }
+                <th>Type</th>
+                <th class="text-end">Change</th>
+                <th class="text-end">Stock after</th>
+                <th>Reason</th>
+                <th>By</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var m in Model.Movements)
+            {
+                <tr>
+                    <td>@Clock.ToLocal(m.OccurredAtUtc).ToString("dd MMM yyyy HH:mm")</td>
+                    @if (Model.Product is null)
+                    {
+                        <td><a asp-action="Ledger" asp-route-productId="@m.ProductId">@m.Product?.Name</a></td>
+                    }
+                    <td><span class="badge @(m.Type == MovementType.Sale ? "text-bg-secondary" : m.Type == MovementType.Adjustment ? "text-bg-warning" : "text-bg-success")">@m.Type</span></td>
+                    <td class="text-end @(m.QuantityChange < 0 ? "text-danger" : "")">@(m.QuantityChange > 0 ? "+" : "")@m.QuantityChange</td>
+                    <td class="text-end">@m.QuantityAfter</td>
+                    <td>@m.Reason @if (!string.IsNullOrEmpty(m.Reference)) { <span class="text-muted small">(ref @m.Reference)</span> }</td>
+                    <td class="small text-muted">@m.PerformedBy</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

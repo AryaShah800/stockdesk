@@ -61,6 +61,18 @@ public sealed class Product : Entity
         QuantityInStock += quantity;
     }
 
+    /// <summary>Corrects stock after a count. The change can be negative but stock cannot go below zero.</summary>
+    public void Adjust(int change)
+    {
+        if (change == 0)
+            throw new DomainException("The adjustment must not be zero.");
+        if (Math.Abs((long)change) > 1_000_000)
+            throw new DomainException("Adjustment is too large.");
+        if ((long)QuantityInStock + change < 0)
+            throw new DomainException($"Stock is {QuantityInStock}, so it cannot be reduced by {-change}.");
+        QuantityInStock += change;
+    }
+
     public void Deactivate() => IsActive = false;
 
     public void Activate() => IsActive = true;

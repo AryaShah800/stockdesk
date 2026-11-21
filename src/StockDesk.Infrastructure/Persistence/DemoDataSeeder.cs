@@ -29,6 +29,10 @@ public sealed class DemoDataSeeder(StockDeskDbContext db)
         };
         db.Products.AddRange(products);
         await db.SaveChangesAsync(ct);
+        var openedAt = DateTime.UtcNow.Date.AddDays(-14);
+        db.StockMovements.AddRange(products.Select(p => new StockMovement(p, MovementType.Opening, p.QuantityInStock,
+            p.QuantityInStock, "demo", openedAt, "Opening stock")));
+        await db.SaveChangesAsync(ct);
 
         await SeedSalesHistoryAsync(products, ct);
     }

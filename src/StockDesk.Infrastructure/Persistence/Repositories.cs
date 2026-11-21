@@ -94,3 +94,19 @@ internal sealed class LowStockAlertRepository(StockDeskDbContext db) : Repositor
             .OrderBy(a => a.RaisedAtUtc)
             .ToListAsync(ct);
 }
+
+internal sealed class StockMovementRepository(StockDeskDbContext db) : IStockMovementRepository
+{
+    public void Add(StockMovement movement) => db.StockMovements.Add(movement);
+
+    public async Task<IReadOnlyList<StockMovement>> ListForProductAsync(int productId, int take, CancellationToken ct = default) =>
+        await db.StockMovements.AsNoTracking().Include(m => m.Product)
+            .Where(m => m.ProductId == productId)
+            .OrderByDescending(m => m.OccurredAtUtc).ThenByDescending(m => m.Id)
+            .Take(take).ToListAsync(ct);
+
+    public async Task<IReadOnlyList<StockMovement>> ListRecentAsync(int take, CancellationToken ct = default) =>
+        await db.StockMovements.AsNoTracking().Include(m => m.Product)
+            .OrderByDescending(m => m.OccurredAtUtc).ThenByDescending(m => m.Id)
+            .Take(take).ToListAsync(ct);
+}

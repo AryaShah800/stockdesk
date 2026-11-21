@@ -26,6 +26,7 @@
                 <a class="@(ctrl == "Sales" && act != "Create" ? "active" : "")" asp-controller="Sales" asp-action="Index"><svg class="ic"><use href="#i-bill"/></svg>Bills</a>
                 <a class="@Active("Products")" asp-controller="Products" asp-action="Index"><svg class="ic"><use href="#i-box"/></svg>Products</a>
                 <a class="@Active("Alerts")" asp-controller="Alerts" asp-action="Index"><svg class="ic"><use href="#i-alert"/></svg>Low stock</a>
+                <a class="@Active("Stock")" asp-controller="Stock" asp-action="Ledger"><svg class="ic"><use href="#i-bill"/></svg>Stock ledger</a>
                 @if (User.IsInRole(Roles.Admin))
                 {
                     <div class="side-label">Admin</div>

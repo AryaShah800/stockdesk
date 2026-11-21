@@ -13,6 +13,7 @@ internal sealed class UnitOfWorkMock
     public Mock<IProductRepository> Products { get; } = new();
     public Mock<ISaleRepository> Sales { get; } = new();
     public Mock<ILowStockAlertRepository> Alerts { get; } = new();
+    public Mock<IStockMovementRepository> Movements { get; } = new();
 
     public UnitOfWorkMock()
     {
@@ -21,6 +22,7 @@ internal sealed class UnitOfWorkMock
         Uow.SetupGet(u => u.Products).Returns(Products.Object);
         Uow.SetupGet(u => u.Sales).Returns(Sales.Object);
         Uow.SetupGet(u => u.LowStockAlerts).Returns(Alerts.Object);
+        Uow.SetupGet(u => u.StockMovements).Returns(Movements.Object);
         Uow.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
     }
 
