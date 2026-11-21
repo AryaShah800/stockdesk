@@ -69,7 +69,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+if (!app.Configuration.GetValue<bool>("Https:RedirectDisabled"))
+    app.UseHttpsRedirection(); // compose serves plain HTTP on 8080
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();

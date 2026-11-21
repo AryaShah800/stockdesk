@@ -67,3 +67,18 @@ jobs:
           name: test-results
           path: TestResults
           if-no-files-found: ignore
+
+  docker-image:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose file fails fast without .env
+        run: |
+          if docker compose config >/dev/null 2>err.txt; then echo "expected failure"; exit 1; fi
+          grep -q "missing .env" err.txt
+      - name: Compose file is valid with .env.example
+        run: cp .env.example .env && docker compose config >/dev/null
+      - name: Build image (no push)
+        run: docker build -t stockdesk-web:ci .
